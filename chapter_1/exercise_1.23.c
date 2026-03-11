@@ -23,7 +23,7 @@ int main() {
             }
             ctm2 = ctm1;
             ctm1 = ct;
-        } else if ((state == OUTSIDE_OUTQUOTE) && (ct == '"') && (ctm1 != '/' || ct != '/') && (ctm1 != '/' || ct != '*')) {
+        } else if ((state == OUTSIDE_OUTQUOTE) && (ct == '"')) {
             state = OUTSIDE_INQUOTE;
             if (ctm2 != EOF) {
                 putchar(ctm2);
