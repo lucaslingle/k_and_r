@@ -56,8 +56,6 @@ void unescape(const char s[], char t[]) {
                     i += 1;
                     j += 1;
                     break;
-                default: 
-                    printf("we here in case default!\n");
             }
         } else {
             t[i] = s[j];
