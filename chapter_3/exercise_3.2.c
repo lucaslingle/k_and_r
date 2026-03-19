@@ -39,28 +39,19 @@ void unescape(const char s[], char t[]) {
     int j = 0;
     int s_jm1 = EOF;
     while (s[j] != '\0') {
-        // putchar(s[j]);
-        // printf("\n");
         if (s[j] == '\\') {
             s_jm1 = s[j];
             j += 1;
         } else if (s_jm1 == '\\') {
-            // putchar(s[j]);
             switch (s[j]) {
                 case 'n': 
-                    // printf("we here in case n!\n");
                     t[i] = '\n';
-                    // putchar(t[i]);
-                    // putchar('\n');
                     s_jm1 = EOF;
                     i += 1;
                     j += 1;
                     break;
                 case 't': 
-                    // printf("we here in case t!\n");
                     t[i] = '\t';
-                    // putchar(t[i]);
-                    // putchar('\n');
                     s_jm1 = EOF;
                     i += 1;
                     j += 1;
@@ -70,14 +61,10 @@ void unescape(const char s[], char t[]) {
             }
         } else {
             t[i] = s[j];
-            // putchar(t[i]);
-            // putchar('\n');
             s_jm1 = s[j];
             i += 1;
             j += 1;
         }
-        // putchar(s_jm1);
-        // printf("\n");
     }
     t[i] = s_jm1;
     t[i+1] = '\0';
