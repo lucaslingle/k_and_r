@@ -1,6 +1,7 @@
 /*
-Given the basic framework, it's straightforward to extend the calculator. 
-Add the modulus (%) operator and provision for negative numbers. 
+Add commands to print top element of the stack without popping, 
+to duplicate it, and to swap the top two positions. 
+Add a command to clear the stack. 
 */
 
 #include <stdio.h>
@@ -14,6 +15,10 @@ double myatof(char []);
 
 void push(double);
 double pop(void);
+void peek(void);
+void dupe(void);
+void swap(void);
+void clear(void);
 
 int getch(void);
 void ungetch(int);
@@ -111,6 +116,37 @@ double pop(void) {
         printf("error: stack empty\n");
         return 0.0;
     }
+}
+
+void peek(void) {
+    if (sp > 0)
+        printf("%f", stack[sp - 1]);
+    else
+        printf("error: stack empty\n");
+}
+
+void dupe(void) {
+    if (sp > 0) {
+        push(stack[sp - 1]);
+    } else {
+       printf("error: stack empty\n");
+    }
+}
+
+void swap(void) {
+    double v1, v2;
+    if (sp > 1) {
+        v2 = pop();
+        v1 = pop();
+        push(v2);
+        push(v1);
+    } else {
+       printf("error: stack empty\n");
+    }
+}
+
+void clear(void) {
+    sp = 0;
 }
 
 int getop(char s[]) {
