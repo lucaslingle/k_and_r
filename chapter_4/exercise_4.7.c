@@ -4,9 +4,16 @@ Should ungets know about buf and bufp, or should it just use ungetch?
 */
 
 // implementation 1:
-// if we assume ungets will only be called once before the buffer is cleared,
+// if we assume ungets will only be called once before the buffer is cleared via getch calls,
 // it would suffice to implement ungets to write chars to buf in reverse order via ungetch. 
 // HOWEVER: this assumes the correct behavior by the user.
+//
+// implementation 1.5:
+// ungets can actually be called multiple times before any getch calls are made,
+// and the order of chars loaded via getch could be made to match the original order,
+// provided the ungets calls are made in lifo order. 
+// (e.g., getch a,b,c -> ungets bc,a -> buf = [c, b, a] -> getch a,b,c)
+// HOWEVER: this again assumes the correct behavior by the user.
 // 
 // implementation 2:
 // we can also implement ungets to use buf as a fifo queue by maintaining 

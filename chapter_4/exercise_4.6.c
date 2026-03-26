@@ -183,7 +183,6 @@ double pop(void) {
     }
 }
 
-
 int getop(char s[]) {
     int i = 0;
     int c, type;
