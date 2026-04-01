@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "getfloat.h"
 #define BUFSIZE 100
 
 static char buffer[BUFSIZE];

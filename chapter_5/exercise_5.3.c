@@ -16,14 +16,10 @@ void strcat(char s[], char t[]) {
 #include <stdio.h>
 
 void mystrcat(char *s, char *t) {
-    while (*s != '\0')
+    while (*s)
         s++;
-    while (*t != '\0') {
-        *s = *t;
-        s++;
-        t++;
-    }
-    *s = '\0';
+    while ((*s++ = *t++))
+        ;
 }
 
 int main() {

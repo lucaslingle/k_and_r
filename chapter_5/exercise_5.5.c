@@ -7,14 +7,14 @@ Full descriptions are in Appendix B.
 
 #include <stdio.h>
 
-char *__strncpy(char *s, const char *t, int n) {
+char *exercise_strncpy(char *s, const char *t, int n) {
     char *s0 = s;
     for (int i = 0; i < n && (*s = *t) != '\0'; i++, s++, t++)
         ;
     return s0;
 }
 
-char *__strncat(char *s, const char *t, int n) {
+char *exercise_strncat(char *s, const char *t, int n) {
     char *s0 = s;
     while (*s != '\0')
         s++;
@@ -23,7 +23,7 @@ char *__strncat(char *s, const char *t, int n) {
     return s0;
 }
 
-int __strncmp(char *s, const char *t, int n) {
+int exercise_strncmp(char *s, const char *t, int n) {
     for (int i = 0; i < n && *s == *t; i++, s++, t++)
         if (*s == '\0')
             return 0;
@@ -38,18 +38,18 @@ int main() {
     printf("%s\n", s);
     printf("%s\n\n", t);
 
-    __strncpy(s, t, 2);
-    printf("__strncpy(s, t, 2) ------\n");
+    exercise_strncpy(s, t, 2);
+    printf("exercise_strncpy(s, t, 2) ------\n");
     printf("%s\n", s);
     printf("%s\n\n", t);
 
-    __strncat(s, t, 2);
-    printf("__strncat(s, t, 2) ------\n");
+    exercise_strncat(s, t, 2);
+    printf("exercise_strncat(s, t, 2) ------\n");
     printf("%s\n", s);
     printf("%s\n\n", t);
 
-    i = __strncmp(s, t, 2);
-    printf("__strncmp(s, t, 2) ------\n");
+    i = exercise_strncmp(s, t, 2);
+    printf("exercise_strncmp(s, t, 2) ------\n");
     printf("%d\n", i);
     printf("%s\n", s);
     printf("%s\n\n", t);
