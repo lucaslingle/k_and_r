@@ -2,7 +2,7 @@
 There is no error checking in day_of_year or month_day.
 Remedy this defect. 
 
-// original code
+// reference code
 static char daytab[2][31] = {
     {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
     {0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
@@ -30,7 +30,7 @@ void month_day(int year, int yearday, int *pmonth, int *pday) {
 #include <stdio.h>
 #define DATE_RANGE_ERR -1
 
-static char daytab[2][31] = {
+static char daytab[2][13] = {
     {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
     {0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 };
@@ -60,7 +60,7 @@ void month_day(int year, int yearday, int *pmonth, int *pday) {
         *pday = DATE_RANGE_ERR;
         return;
     }
-    
+
     for (i = 1; yearday > daytab[leap][i]; i++)
         yearday -= daytab[leap][i];
     *pmonth = i;
@@ -87,8 +87,8 @@ int main() {
     printf("Date: %d/%d/%d, Day of Year: %d\n", y3, m3, d3, doy3);
 
     int y4 = 7777;
-    int m4 = 7;
-    int d4 = 77;
+    int m4 = 77;
+    int d4 = 7;
     int doy4 = day_of_year(y4, m4, d4);
     printf("Date: %d/%d/%d, Day of Year: %d\n", y4, m4, d4, doy4);
 
@@ -98,8 +98,14 @@ int main() {
     int doy5 = day_of_year(y5, m5, d5);
     printf("Date: %d/%d/%d, Day of Year: %d\n", y5, m5, d5, doy5);
 
-    int m6;
-    int d6;
-    month_day(y5, doy5, &m6, &d6);
-    printf("Date: %d/%d/%d, Day of Year: %d\n", y5, m6, d6, doy5);
+    int y6 = 7777;
+    int m6 = 7;
+    int d6 = 77;
+    int doy6 = day_of_year(y6, m6, d6);
+    printf("Date: %d/%d/%d, Day of Year: %d\n", y6, m6, d6, doy6);
+
+    int m7;
+    int d7;
+    month_day(y6, doy6, &m7, &d7);
+    printf("Date: %d/%d/%d, Day of Year: %d\n", y6, m7, d7, doy6);
 }
