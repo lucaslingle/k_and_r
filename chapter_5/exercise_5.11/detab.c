@@ -40,12 +40,11 @@ int main(int argc, char *argv[]) {
     int c;
     int line_offset = 0;
     while ((c = getchar()) != EOF) {
-        tab_stops = tab_stops0;
         if (c == '\n') {
             putchar('\n');
             line_offset = 0;
         } else if (c == '\t') {
-            for (; *tab_stops != -1; tab_stops++) {
+            for (tab_stops = tab_stops0; *tab_stops != -1; tab_stops++)
                 if (line_offset < *tab_stops) {
                     for (int i = line_offset; i < *tab_stops; i++) {
                         putchar(' ');
@@ -53,7 +52,6 @@ int main(int argc, char *argv[]) {
                     }
                     break;
                 }
-            }
         } else {
             putchar(c);
             line_offset++;
