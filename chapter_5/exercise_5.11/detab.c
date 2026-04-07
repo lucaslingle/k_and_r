@@ -27,16 +27,14 @@ int exercise_atoi(char *s) {
 int main(int argc, char *argv[]) {
     int *tab_stops; 
     int *tab_stops0 = tab_stops;
-    if (argc == 1) {
-        for (int j = 0; j < 10; j++) {
+    if (argc == 1)
+        for (int j = 0; j < 10; j++)
             *tab_stops++ = (j + 1) * 8;
-        }
-    } else {
+    else
         while (--argc > 0) {
             ++argv;
             *tab_stops++ = exercise_atoi(*argv);
         }
-    }
     *tab_stops = -1;
     
     int c;
