@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     }
     // go back to the last i we wrote to, namely, (i-1), then find its mod n value,
     // then go back by k slots, from k = (n-1) to k = 0, inclusive.
-    // the result will be the correct residue classes for the last n lines.
+    // the result will have the correct residue classes for each of the last n lines.
     //
     // however, in the c language, modulus for negative operands is defined using 
     //     c = sign(c) * (|c| mod n), 
