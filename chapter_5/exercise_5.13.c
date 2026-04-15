@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
         }
     }
     for (int k = n-1; k >= 0; k--)
-        printf("%s", lineptrs[(((i-1) % n) - k) % n]);
+        printf("%s", lineptrs[(((i-1) % n) - k + n) % n]);
 }
 
 int my_atoi(char *s) {
@@ -56,13 +56,13 @@ int my_atoi(char *s) {
     return sign * n;
 }
 
-int my_getline(char s[], int lim) {
-    int c, i;
-    i = 0;
+int my_getline(char *s, int lim) {
+    char *s0 = s;
+    int c;
     while (--lim > 0 && (c = getchar()) != EOF && c != '\n')
-        s[i++] = c;
+        *s++ = c;
     if (c == '\n')
-        s[i++] = c;
-    s[i] = '\0';
-    return i;
+        *s++ = c;
+    *s = '\0';
+    return (s - s0);
 }
