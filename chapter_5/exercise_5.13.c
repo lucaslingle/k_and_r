@@ -45,7 +45,8 @@ int main(int argc, char *argv[]) {
     // the result will be the correct residue classes for the last n lines.
     //
     // however, in the c language, modulus for negative operands is defined using 
-    //     c = sign(c) * (|c| mod n), we need to add a multiple of n to ensure positivity.
+    //     c = sign(c) * (|c| mod n), 
+    // which gives garbage residue classes, so we add a multiple of n to ensure positivity.
     // note this does not affect the residue class, so its ok!
     for (int k = n-1; k >= 0; k--)
         printf("%s", lineptrs[(((i-1) % n) - k + n) % n]);
