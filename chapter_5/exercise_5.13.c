@@ -40,6 +40,13 @@ int main(int argc, char *argv[]) {
             tail++;
         }
     }
+    // go back to the last i we wrote to, namely, (i-1), then find its mod n value,
+    // then go back by k slots, from k = (n-1) to k = 0, inclusive.
+    // the result will be the correct residue classes for the last n lines.
+    //
+    // however, in the c language, modulus for negative operands is defined using 
+    //     c = sign(c) * (|c| mod n), we need to add a multiple of n to ensure positivity.
+    // note this does not affect the residue class, so its ok!
     for (int k = n-1; k >= 0; k--)
         printf("%s", lineptrs[(((i-1) % n) - k + n) % n]);
 }
