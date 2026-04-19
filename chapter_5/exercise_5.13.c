@@ -35,12 +35,10 @@ int main(int argc, char *argv[]) {
     int i, j;
     for (i = 0; i < MAXLINES && (len = my_getline(temp, MAXLEN)) > 0; i++) {
         lineptrs[i % n] = tail;
-        for (j = 0; j <= len; j++) { // includes ending null byte
-            *tail = temp[j];
-            tail++;
-        }
+        for (j = 0; j <= len; j++)  // includes ending null byte
+            *tail++ = temp[j];
     }
-    // go back to the last i we wrote to, namely, (i-1), then find its mod n value,
+    // go back to the last i we wrote to, namely (i-1), then find its mod n value,
     // then go back by k slots, from k = (n-1) to k = 0, inclusive.
     // the result will have the correct residue classes for each of the last n lines.
     //
