@@ -1,12 +1,9 @@
-
 /* 
 Add the option -f to fold upper and lowercase together, 
 so that case distinctions are not made during sorting;
 for example, a and A compare equal.
 
 (Starting point is code from exercise 5.14.)
-
-WORK IN PROGRESS
 */
 
 #include <stdio.h>
@@ -19,37 +16,40 @@ char *lineptr[MAXLINES];  // pointers to text lines
 int my_readlines(char *lineptr[], int nlines);
 void my_writelines(char *lineptr[], int nlines);
 int my_numcmp(char *, char *);
+double my_atof(char *);
 void my_qsort(
     void *lineptr[], int left, int right, 
     int (*comp)(void *, void *), 
-    int (*reversal)(int),
-    char *(*folding)(char *)
+    int (*maybe_reverse)(int),
+    void (*maybe_fold)(char *, char *)
 );
-double my_atof(char *);
-int identity_cmp(int);
-int reversal_cmp(int);
-int identity_case(int);
-int fold_case(int);
+int yes_reverse(int);
+int no_reverse(int);
+void yes_fold(char *, char *);
+void no_fold(char *, char *);
 
 // sort input lines
 int main(int argc, char *argv[]) {
     int nlines;       // num input lines read
     int numeric = 0;  // 1 if numeric sort
     int reverse = 0;  // 1 if sort in decreasing order
+    int fold = 0;     // 1 if fold case distinctions
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
             if (strcmp(argv[i], "-n") == 0)
                 numeric = 1;
             if (strcmp(argv[i], "-r") == 0)
                 reverse = 1;
+            if (strcmp(argv[i], "-f") == 0)
+                fold = 1;
         }
     }
     if ((nlines = my_readlines(lineptr, MAXLINES)) >= 0) {
         my_qsort(
             (void **) lineptr, 0, nlines-1, 
-            (int (*)(void *, void *))(numeric ? my_numcmp : my_strcmp),
-            (int (*)(int))(reverse ? reversal_cmp : identity_cmp),
-            (char *(*)(char *))(fold ? fold_case : identity_case),
+            (int (*)(void *, void *))(numeric ? my_numcmp : strcmp),
+            (int (*)(int))(reverse ? yes_reverse : no_reverse),
+            (void (*)(char *, char *))(fold ? yes_fold : no_fold)
         );
         my_writelines(lineptr, nlines);
         return 0;
@@ -105,7 +105,8 @@ int my_numcmp(char *s1, char *s2) {
 void my_qsort(
     void *v[], int left, int right, 
     int (*comp)(void *, void *),
-    int (*reversal)(int)
+    int (*maybe_reverse)(int),
+    void (*maybe_fold)(char *, char *)
 ) {
     int i, last;
     void my_swap(void *v[], int, int);   
@@ -113,12 +114,21 @@ void my_qsort(
         return;
     my_swap(v, left, (left + right) / 2);
     last = left;
-    for (i = left+1; i <= right; i++)
-        if ((*reversal)((*comp)(v[i], v[left])) < 0)
+
+    char tv_1[MAXLEN];
+    char tv_2[MAXLEN];
+    int compare_val;
+    for (i = left+1; i <= right; i++) {
+        (*maybe_fold)(tv_1, v[i]);
+        (*maybe_fold)(tv_2, v[left]);
+        compare_val = (*comp)(tv_1, tv_2);
+        compare_val = (*maybe_reverse)(compare_val);
+        if (compare_val < 0)
             my_swap(v, ++last, i);
+    }
     my_swap(v, left, last);
-    my_qsort(v, left, last-1, comp, reversal);
-    my_qsort(v, last+1, right, comp, reversal);
+    my_qsort(v, left, last-1, comp, maybe_reverse, maybe_fold);
+    my_qsort(v, last+1, right, comp, maybe_reverse, maybe_fold);
 }
 
 void my_swap(void *v[], int i, int j) {
@@ -146,10 +156,22 @@ double my_atof(char *s) {
     return sign * val / power;
 }
 
-int identity_cmp(int n) {
+int yes_reverse(int n) {
+    return -n;
+}
+
+int no_reverse(int n) {
     return n;
 }
 
-int reversal_cmp(int n) {
-    return -n;
+void yes_fold(char *dest, char *src) {
+    while (*src != '\0')
+        *dest++ = tolower(*src++);
+    *dest = '\0';
+}
+
+void no_fold(char *dest, char *src) {
+    while (*src != '\0')
+        *dest++ = *src++;
+    *dest = '\0';
 }
