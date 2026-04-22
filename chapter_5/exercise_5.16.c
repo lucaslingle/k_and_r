@@ -186,7 +186,6 @@ void no_fold(char *dest, char *src) {
 }
 
 void yes_dir(char *dest, char *src) {
-    char *s0 = src;
     while (*src != '\0') {
         if (isspace(*src) || isalnum(*src))
             *dest++ = *src;
