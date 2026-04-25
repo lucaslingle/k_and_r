@@ -5,44 +5,29 @@ each field sorted according to an independent set of options.
 (The index for this book was sorted with -df for index category 
 and -n for the page numbers.)
 
-(Starting point is code from exercise 5.16.)
-
-WORK IN PROGRESS!
-
-MY NOTES:
-we shall take invocations of the form ./program.o -nrfd, 
-as well as ./program.o -c0 nrfd -c1 nrfd ...
-in the former case we shall gather all text per line as field 0, ignoring the separator if it appears.
-in the latter case we shall gather a subset of the text per line for each field;
-    if there are not enough fields we shall produce an error.
-internally, we shall use arrays to keep track of the sorting specification per field,
-    and if the invocation does not specify fields, 
-    we shall use index zero of each array to store the sorting spec. 
-
-SOLUTION STRATEGY:
-- initially let's assume correctly formatted input with exactly MAXFIELDS fields.
-- have qsort copy the fields into a static variable, char *sv[MAXLINES][MAXFIELDS].
-- define a complex_compare function that takes sv as an arg, and
-    takes the bit arrays for numeric, reverse, fold, and directory order,
-    and returns a variable based on the compare value of each field.
-    upon reaching the first field with a definitive not equals compare, 
-    we shall return its sign. if all fields compare equal, return 0.
-- use this complex_compare function to make swaps on original pointer array v.
+Usage: 
+Single field mode is ./program.o [-nrfd]
+Multi-field mode is ./program.o -c 0 [nrfd] -c 2 [nrfd], etc.
 */
 
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#define SEP '\t'
 #define MAXLEN 100
-#define MAXFIELDS 1
-#define MAXLINES 5000                    // const after init - max lines to be sorted
-char *lineptr[MAXLINES];                 // const after init - array of pointers to text lines
-char *sep_lineptr[MAXLINES][MAXFIELDS];  // array of pointers to the separated values
-int indices[MAXLINES];
+#define MAXFIELDS 100
+#define MAXLINES 5000
+char *lineptr[MAXLINES];                 // array of ptrs to text lines w/ mem alloc'd from block
+char *sep_lineptr[MAXLINES][MAXFIELDS];  // array of ptrs to the separate fields in each line
+int indices[MAXLINES];                   // used for sorting lineptr and sep_lineptr jointly.
 
 int my_readlines(char *lineptr[MAXLINES]);
-void my_sep_lines(char *lineptr[MAXLINES], char *sep_lineptr[MAXLINES][MAXFIELDS], int nlines);
+void my_sep_lines(
+    char *lineptr[MAXLINES], 
+    char *sep_lineptr[MAXLINES][MAXFIELDS], 
+    int nlines,
+    int nfields,
+    int sep
+);
 void my_indices(int indices[MAXLINES]);
 int my_numcmp(char *, char *);
 int my_atoi(char *s);
@@ -52,18 +37,22 @@ void my_qsort(
     int indices[MAXLINES], 
     int left, 
     int right, 
+    int sort_spec[MAXFIELDS],
     int numeric_spec[MAXFIELDS],
     int reverse_spec[MAXFIELDS], 
     int fold_spec[MAXFIELDS], 
-    int dir_spec[MAXFIELDS]
+    int dir_spec[MAXFIELDS],
+    int nfields
 );
 int my_complex_compare(
     char *key1[MAXFIELDS], 
     char *key2[MAXFIELDS], 
+    int sort_spec[MAXFIELDS],
     int numeric_spec[MAXFIELDS],
     int reverse_spec[MAXFIELDS], 
     int fold_spec[MAXFIELDS], 
-    int dir_spec[MAXFIELDS]
+    int dir_spec[MAXFIELDS],
+    int nfields
 );
 int yes_reverse(int);
 int no_reverse(int);
@@ -74,39 +63,68 @@ void no_dir(char *, char *);
 
 // sort input lines
 int main(int argc, char *argv[]) {
-    int nlines;                    // num input lines read
-    int numeric_spec[MAXFIELDS];  // 1 for numeric sort
-    int reverse_spec[MAXFIELDS];  // 1 for decreasing order
-    int fold_spec[MAXFIELDS];     // 1 for folded case distinctions
-    int dir_spec[MAXFIELDS];      // 1 for directory order
-    int field_id = 0;
+    int sort_spec[MAXFIELDS] = {};     // 1 for sort on column, init'd at zero
+    int numeric_spec[MAXFIELDS] = {};  // 1 for numeric sort, init'd at zero
+    int reverse_spec[MAXFIELDS] = {};  // 1 for decreasing order, init'd at zero
+    int fold_spec[MAXFIELDS] = {};     // 1 for folded case distinctions, init'd at zero
+    int dir_spec[MAXFIELDS] = {};      // 1 for directory order, init'd at zero
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-c") == 0) {
-            field_id = my_atoi(argv[++i]);
-            i++;
+    int nlines;
+    int nfields = 1;
+    int sep = EOF;
+    int field_idx;
+
+    // single-field mode: sort on text.
+    if (argc <= 2)
+        sort_spec[0] = 1;
+
+    // single-field mode: parse any flags of ./program.o [-nrfd]
+    if (argc == 2)
+        if (argv[1][0] == '-') {
+            numeric_spec[0] = (strchr(argv[1], 'n') != 0);
+            reverse_spec[0] = (strchr(argv[1], 'r') != 0);
+            fold_spec[0] = (strchr(argv[1], 'f') != 0);
+            dir_spec[0] = (strchr(argv[1], 'd') != 0);
         }
-        if (argv[i][0] == '-') {  // arg starts with "-"
-            numeric_spec[field_id] = (strchr(argv[i], 'n') != 0);
-            reverse_spec[field_id] = (strchr(argv[i], 'r') != 0);
-            fold_spec[field_id] = (strchr(argv[i], 'f') != 0);
-            dir_spec[field_id] = (strchr(argv[i], 'd') != 0);
-            i++;
+
+    // multi-field mode: parse ./program.o -c 0 [nrfd] -c 2 [nrfd], etc.
+    if (argc > 2) {
+        for (int i = 1; i < argc; i++) {
+            if ((i-1) % 3 == 0) {
+                if (strchr(argv[1], 'c') == 0) {
+                    printf("ERROR: bad arg format.");
+                    return -1;
+                }   
+            } else if ((i-1) % 3 == 1) {
+                field_idx = my_atoi(argv[i]);
+            } else {
+                sort_spec[field_idx] = 1;
+                numeric_spec[field_idx] = (strchr(argv[i], 'n') != 0);
+                reverse_spec[field_idx] = (strchr(argv[i], 'r') != 0);
+                fold_spec[field_idx] = (strchr(argv[i], 'f') != 0);
+                dir_spec[field_idx] = (strchr(argv[i], 'd') != 0);
+            }
         }
     }
+
     if ((nlines = my_readlines(lineptr)) >= 0) {
-        my_sep_lines(lineptr, sep_lineptr, nlines);
+        my_sep_lines(lineptr, sep_lineptr, nlines, nfields, sep);
         my_indices(indices);
         my_qsort(
             sep_lineptr,
             indices,
-            0, 
-            nlines-1, 
+            0,
+            nlines-1,
+            sort_spec,
             numeric_spec,
             reverse_spec,
             fold_spec,
-            dir_spec
+            dir_spec,
+            nfields
         );
+        for (int j = 0; j < 80; j++)
+            putchar('-');
+        putchar('\n');
         for (int j = 0; j < nlines; j++)
             printf("%s\n", lineptr[indices[j]]);
         return 0;
@@ -115,14 +133,21 @@ int main(int argc, char *argv[]) {
     return 1;
 }
 
-void my_sep_lines(char *v[MAXLINES], char *sv[MAXLINES][MAXFIELDS], int nlines) {
+
+void my_sep_lines(
+    char *v[MAXLINES], 
+    char *sv[MAXLINES][MAXFIELDS], 
+    int nlines, 
+    int nfields, 
+    int sep
+) {
     char *src_ptr;
     for (int line_idx = 0; line_idx < nlines; line_idx++) {
         int field_idx = 0;
-        int prev = SEP;
+        int prev = sep;
         src_ptr = v[line_idx];
-        while (*src_ptr != '\0') {
-            if (prev == SEP)
+        while (*src_ptr != '\0' && field_idx < nfields) {
+            if (prev == sep)
                 sv[line_idx][field_idx++] = src_ptr;
             prev = *src_ptr++;
         }
@@ -178,10 +203,12 @@ void my_qsort(
     int indices[MAXLINES],
     int left, 
     int right, 
+    int sort_spec[MAXFIELDS],
     int numeric_spec[MAXFIELDS],
     int reverse_spec[MAXFIELDS], 
     int fold_spec[MAXFIELDS], 
-    int dir_spec[MAXFIELDS]
+    int dir_spec[MAXFIELDS],
+    int nfields
 ) {
     void my_swap(int indices[MAXLINES], int, int); 
     if (left >= right)
@@ -194,10 +221,12 @@ void my_qsort(
         val = my_complex_compare(
             keys[indices[i]], 
             keys[indices[left]], 
+            sort_spec,
             numeric_spec,
             reverse_spec,
             fold_spec,
-            dir_spec
+            dir_spec,
+            nfields
         );
         if (val < 0) {
             ++last;
@@ -205,23 +234,25 @@ void my_qsort(
         }
     }
     my_swap(indices, left, last);
-    my_qsort(keys, indices, left, last-1, numeric_spec, reverse_spec, fold_spec, dir_spec);
-    my_qsort(keys, indices, last+1, right, numeric_spec, reverse_spec, fold_spec, dir_spec);
+    my_qsort(keys, indices, left, last-1, sort_spec, numeric_spec, reverse_spec, fold_spec, dir_spec, nfields);
+    my_qsort(keys, indices, last+1, right, sort_spec, numeric_spec, reverse_spec, fold_spec, dir_spec, nfields);
 }
 
 int my_complex_compare(
     char *sv1[MAXFIELDS], 
     char *sv2[MAXFIELDS], 
+    int sort_spec[MAXFIELDS],
     int numeric_spec[MAXFIELDS],
     int reverse_spec[MAXFIELDS], 
     int fold_spec[MAXFIELDS], 
-    int dir_spec[MAXFIELDS]
+    int dir_spec[MAXFIELDS],
+    int nfields
 ) {
     char tv1[MAXLEN];
     char tv2[MAXLEN];
     int val;
 
-    for (int f = 0; f < MAXFIELDS; f++) {
+    for (int f = 0; f < nfields; f++) {
         if (fold_spec[f]) {
             yes_fold(tv1, sv1[f]);
             yes_fold(tv2, sv2[f]);
@@ -238,22 +269,21 @@ int my_complex_compare(
             no_dir(tv2, tv2);
         }
 
-        if (numeric_spec[f]) {
+        if (numeric_spec[f])
             val = my_numcmp(tv1, tv2);
-        } else {
+        else
             val = strcmp(tv1, tv2);
-        }
 
-        if (reverse_spec[f]) {
+        if (reverse_spec[f])
             val = yes_reverse(val);
-        } else {
+        else
             val = no_reverse(val);
-        }
 
-        if (val > 0)
-            return 1;
-        if (val < 0)
-            return -1;
+        if (sort_spec[f])
+            if (val > 0)
+                return 1;
+            if (val < 0)
+                return -1;
     }
     return 0;
 }
