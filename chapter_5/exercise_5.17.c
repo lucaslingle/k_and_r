@@ -13,6 +13,7 @@ Multi-field mode is ./program.o -c 0 [nrfd] -c 2 [nrfd], etc.
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 #define MAXLEN 100
 #define MAXFIELDS 100
 #define MAXLINES 5000
@@ -105,6 +106,8 @@ int main(int argc, char *argv[]) {
                 dir_spec[field_idx] = (strchr(argv[i], 'd') != 0);
             }
         }
+        nfields = field_idx + 1;
+        sep = '\t';
     }
 
     if ((nlines = my_readlines(lineptr)) >= 0) {
@@ -150,6 +153,10 @@ void my_sep_lines(
             if (prev == sep)
                 sv[line_idx][field_idx++] = src_ptr;
             prev = *src_ptr++;
+        }
+        if (field_idx < nfields) {
+            printf("ERROR: got malformatted line\n");
+            exit(1);
         }
     }
 }
