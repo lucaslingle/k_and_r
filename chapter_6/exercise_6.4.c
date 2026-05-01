@@ -103,13 +103,15 @@ int tree_to_count(struct tnode *p) {
     return nr_nodes;
 }
 
-void tree_to_unsorted_pointer_array(struct tnode *p, struct tnode *a[]) {
+void tree_to_unsorted_pointer_array(struct tnode *p, struct tnode *a[], int is_root) {
     static int idx = 0;
     if (p != NULL) {
         a[idx++] = p;
-        tree_to_unsorted_pointer_array(p->left, a);
-        tree_to_unsorted_pointer_array(p->right, a);
+        tree_to_unsorted_pointer_array(p->left, a, 0);
+        tree_to_unsorted_pointer_array(p->right, a, 0);
     }
+    if (is_root)
+        idx = 0;
 }
 
 void swap(struct tnode *a[], int i, int j) {
@@ -141,7 +143,7 @@ int main(int argc, char *argv[]) {
             root = add_tree(root, word);
     int nr_nodes = tree_to_count(root);
     struct tnode **arr = malloc(nr_nodes * sizeof(struct tnode *));
-    tree_to_unsorted_pointer_array(root, arr);
+    tree_to_unsorted_pointer_array(root, arr, 1);
     qsort_pointer_array_by_count(arr, 0, nr_nodes-1);
     print_line(80);
     for (int i = 0; i < nr_nodes; i++)
