@@ -179,19 +179,6 @@ void ungetch(int c) {
         buffer[bp++] = c;
 }
 
-int my_atoi(char *s) {
-    double val;
-    int sign;
-    for (; isspace(*s); s++)  // skip whitespace
-        ;
-    sign = (*s == '-') ? -1 : 1;
-    if (*s == '+' || *s == '-')
-        s++;
-    for (val = 0; isdigit(*s); s++)
-        val = 10 * val + (*s - '0');
-    return sign * val;
-}
-
 struct list {
     int val;
     struct list *next;
