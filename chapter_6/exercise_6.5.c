@@ -67,6 +67,6 @@ void undef(char *s) {
             free((void *) node);
         }
         prev = node;
-        next = node->next;
+        node = node->next;
     }
 }
