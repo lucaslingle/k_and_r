@@ -42,14 +42,14 @@ struct nlist *install(char *name, char *defn) {
 
     if ((np = lookup(name)) == NULL) {  // not there
         np = (struct nlist *) malloc(sizeof(*np));
-        if (np == NULL || (np->name = strdup(name)) == NULL)
+        if (np == NULL || (np->name = _strdup(name)) == NULL)
             return NULL;
         hashval = hash(name);
         np->next = hashtab[hashval];
         hashtab[hashval] = np;
     } else  // already there, must update defn
         free((void *) np->defn);
-    if ((np->defn = strdup(defn)) == NULL)
+    if ((np->defn = _strdup(defn)) == NULL)
         return NULL;
     return np;
 }
