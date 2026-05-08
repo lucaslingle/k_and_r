@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
             printf("%%\n");  // print one '%' followed by a newline
             n = 0;
         }
-        if (!iscntrl(c)) {
+        if (iscntrl(c)) {
             printf("\\x%x", c);  // print non-printable chars using hex
         } else if (c == '\\') {
             printf("\\\\");  // print two '\' for every one appearing in original input
