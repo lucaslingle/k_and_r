@@ -67,16 +67,16 @@ void minprintf(char *fmt, ...) {
             n += printf("%i", dval);
             break;
         case 'o':
-            uval = va_arg(ap, unsigned);
-            n += printf("%o", uval);
+            dval = va_arg(ap, int);
+            n += printf("%o", dval);
             break;
         case 'x':
-            uval = va_arg(ap, unsigned);
-            n += printf("%x", uval);
+            dval = va_arg(ap, int);
+            n += printf("%x", dval);
             break;
         case 'X':
-            uval = va_arg(ap, unsigned);
-            n += printf("%X", uval);
+            dval = va_arg(ap, int);
+            n += printf("%X", dval);
             break;
         case 'u':
             uval = va_arg(ap, unsigned);
