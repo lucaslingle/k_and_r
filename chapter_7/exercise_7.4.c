@@ -56,6 +56,7 @@ int minscanf(char *fmt, ...) {
             v = scanf("%g", va_arg(ap, float *));            
             break;
         default:
+            v = 2;
             break;
         }
         if (v == EOF)
