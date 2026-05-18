@@ -27,97 +27,43 @@ int minscanf(char *fmt, ...) {
         switch (*++fmt) {
         case 'd':
             v = scanf("%d", va_arg(ap, int *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'i':
             v = scanf("%i", va_arg(ap, int *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'o':
             v = scanf("%o", va_arg(ap, int *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'x':
             v = scanf("%x", va_arg(ap, int *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'u':
             v = scanf("%u", va_arg(ap, unsigned *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'c':
             v = scanf("%c", va_arg(ap, char *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 's':
             v = scanf("%s", va_arg(ap, char *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'e':
             v = scanf("%e", va_arg(ap, float *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'f':
             v = scanf("%f", va_arg(ap, float *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
             break;
         case 'g':
-            v = scanf("%g", va_arg(ap, float *));
-            if (v == EOF)
-                return EOF;
-            else if (v == 0)
-                return n;
-            else
-                n++;
+            v = scanf("%g", va_arg(ap, float *));            
             break;
         default:
             break;
         }
+        if (v == EOF)
+            return EOF;
+        else if (v == 0)
+            return n;
+        else if (v == 1)
+            n++;
     }
     va_end(ap);
     return n;
