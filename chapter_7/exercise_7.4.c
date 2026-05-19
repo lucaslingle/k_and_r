@@ -80,7 +80,8 @@ int main() {
     char sval[50];
     float fval;
 
-    // scanf("%i %o %x %u %c %s %f\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
+    // int ret = scanf("abc%i %o %x %u %c %s %f\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
+    // printf("ret = %d\n", ret);
     // printf("%i\n", ival);
     // printf("%o\n", oval);
     // printf("%x\n", xval);
@@ -89,7 +90,7 @@ int main() {
     // printf("%s\n", sval);
     // printf("%f\n", fval);
 
-    int ret = minscanf("%i %o %x %u %c %s %f %%\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
+    int ret = minscanf("abc%i %o %x %u %c %s %f %%\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
     printf("ret = %d\n", ret);
     printf("%i\n", ival);
     printf("%o\n", oval);
