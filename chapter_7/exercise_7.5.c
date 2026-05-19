@@ -14,7 +14,6 @@ and/or sscanf to do the input and number conversion.
 
 void push(double);
 double pop(void);
-double peek(void);
 double stack[STACKSIZE];
 int sp = 0;
 
