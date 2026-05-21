@@ -5,6 +5,8 @@ from the previous section.
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
 
 int minscanf(char *fmt, ...) {
     va_list ap;
@@ -14,6 +16,8 @@ int minscanf(char *fmt, ...) {
 
     va_start(ap, fmt);
     for (; *fmt; fmt++) {
+        if (*fmt == ' ' || *fmt == '\t')
+            continue;
         if (*fmt != '%') {
             c = getc(stdin);
             if (c == EOF)
@@ -41,6 +45,12 @@ int minscanf(char *fmt, ...) {
             v = scanf("%u", va_arg(ap, unsigned *));
             break;
         case 'c':
+            // we cant use %1s here because the terminal null byte 
+            // can be written onto something else we care about...
+            // on my machine it was written onto the uval passed by main().
+            while (isspace(c = getc(stdin)))
+                ;
+            ungetc(c, stdin);
             v = scanf("%c", va_arg(ap, char *));
             break;
         case 's':
@@ -53,11 +63,23 @@ int minscanf(char *fmt, ...) {
             v = scanf("%f", va_arg(ap, float *));
             break;
         case 'g':
-            v = scanf("%g", va_arg(ap, float *));            
+            v = scanf("%g", va_arg(ap, float *));
             break;
-        default:
+        case '*':
             v = 2;
             break;
+        case '%':
+            c = getc(stdin);
+            if (c == EOF)
+                return EOF;
+            else if (c != *fmt) {
+                ungetc(c, stdin);
+                return n;
+            } else
+                continue;
+        default:
+            fprintf(stderr, "minscanf got bad string format percent %c\n", *fmt);
+            exit(1);
         }
         if (v == EOF)
             return EOF;
@@ -80,7 +102,7 @@ int main() {
     char sval[50];
     float fval;
 
-    // int ret = scanf("abc%i %o %x %u %c %s %f\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
+    // int ret = scanf("abc%i  %o %x %u %c %s %f\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
     // printf("ret = %d\n", ret);
     // printf("%i\n", ival);
     // printf("%o\n", oval);
@@ -90,7 +112,7 @@ int main() {
     // printf("%s\n", sval);
     // printf("%f\n", fval);
 
-    int ret = minscanf("abc%i %o %x %u %c %s %f %%\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
+    int ret = minscanf("abc%i  %o\t%x %u %c %s %f %%\n", &ival, &oval, &xval, &uval, &cval, sval, &fval);
     printf("ret = %d\n", ret);
     printf("%i\n", ival);
     printf("%o\n", oval);
