@@ -33,7 +33,7 @@ FILE my_iob[OPEN_MAX] = {
 #define stdout (&my_iob[1])
 #define stderr (&my_iob[2])
 
-int _fillbuf(FILE *);
+int my_fillbuf(FILE *);
 
 #define feof(p)    (((p)->flag & _EOF) != 0)
 #define ferror(p)  (((p)->flag & _ERR) != 0)

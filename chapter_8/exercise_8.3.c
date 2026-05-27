@@ -1,6 +1,5 @@
 /*
-Rewrite fopen and _fillbuf with [bit] fields instead of 
-explicit bit operations. Compare code size and execution speed.
+Design and write _flushbuf, fflush, and fclose.
 */
 
 #include <stdlib.h>
@@ -21,27 +20,17 @@ enum _flags {
     _ERR   = 020
 };
 
-// see k&r page 150 for reference on bit fields.
-// make bitwidth-1 fields each for the five flags.
-typedef struct _flagbits {
-    unsigned int read : 1;
-    unsigned int write : 1;
-    unsigned int unbuf : 1;
-    unsigned int eof : 1;
-    unsigned int err : 1;
-} FLAGBITS;
-
 typedef struct my_iobuf {
     int cnt;
     char *ptr;
     char *base;
-    FLAGBITS flag;
+    int flag;
     int fd;
 } FILE;
 FILE my_iob[OPEN_MAX] = {
-    { 0, (char *) 0, (char *) 0, (FLAGBITS) { 1, 0, 0, 0, 0 }, 0},
-    { 0, (char *) 0, (char *) 0, (FLAGBITS) { 0, 1, 0, 0, 0 }, 1},
-    { 0, (char *) 0, (char *) 0, (FLAGBITS) { 0, 1, 1, 0, 0 }, 2},
+    { 0, (char *) 0, (char *) 0, _READ, 0},
+    { 0, (char *) 0, (char *) 0, _WRITE, 1},
+    { 0, (char *) 0, (char *) 0, _WRITE | _UNBUF, 2},
 };
 
 #define stdin  (&my_iob[0])
@@ -49,14 +38,18 @@ FILE my_iob[OPEN_MAX] = {
 #define stderr (&my_iob[2])
 
 int my_fillbuf(FILE *);
+int my_flushbuf(int, FILE *);
 
-#define feof(p)    (((p)->flag.eof) != 0)
-#define ferror(p)  (((p)->flag.err) != 0)
+#define feof(p)    (((p)->flag & _EOF) != 0)
+#define ferror(p)  (((p)->flag & _ERR) != 0)
 #define fileno(p)  ((p)->fd)
 
 #define getc(p)    (--(p)->cnt >= 0 \
                     ? (unsigned char) *(p)->ptr++ : my_fillbuf(p))
+#define putc(x, p) (--(p)->cnt >= 0 \
+                    ? *(p)->ptr++ = (x) : my_flushbuf((x), p))
 #define getchar()  getc(stdin)
+#define putchar()  putc((x), stdout)
 #define PERMS 0666
 
 FILE *my_fopen(char *name, char *mode) {
@@ -66,7 +59,7 @@ FILE *my_fopen(char *name, char *mode) {
     if (*mode != 'r' && *mode != 'w' && *mode != 'a')
         return NULL;
     for (fp = my_iob; fp < my_iob + OPEN_MAX; fp++)
-        if (!fp->flag.read && !fp->flag.write)  // found free slot
+        if ((fp->flag & (_READ | _WRITE)) == 0)  // found free slot
             break;
     if (fp >= my_iob + OPEN_MAX)
         return NULL;
@@ -84,20 +77,16 @@ FILE *my_fopen(char *name, char *mode) {
     fp->fd = fd;
     fp->cnt = 0;
     fp->base = NULL;
-    fp->flag = (FLAGBITS) { 0, 0, 0, 0, 0 }; 
-    if (*mode == 'r')
-        fp->flag.read = 1;
-    else
-        fp->flag.write = 1;
+    fp->flag = (*mode == 'r') ? _READ : _WRITE;
     return fp;
 }
 
 int my_fillbuf(FILE *fp) {
     int bufsize;
 
-    if (!fp->flag.read || fp->flag.write || fp->flag.err)
+    if ((fp->flag & (_READ | _WRITE | _ERR)) != _READ)
         return EOF;
-    bufsize = (fp->flag.unbuf) ? 1 : BUFSIZ;
+    bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ;
     if (fp->base == NULL)  // no buffer allocd yet
         if ((fp->base = (char *) malloc(bufsize)) == NULL)
             return EOF;  // cant get buffer
@@ -105,13 +94,47 @@ int my_fillbuf(FILE *fp) {
     fp->cnt = read(fp->fd, fp->ptr, bufsize);
     if (--fp->cnt < 0) {
         if (fp->cnt == -1)
-            fp->flag.eof = 1;
+            fp->flag |= _EOF;
         else
-            fp->flag.err = 1;
+            fp->flag |= _ERR;
         fp->cnt = 0;
         return EOF;
     }
     return (unsigned char) *fp->ptr++;
+}
+
+int my_flushbuf(int x, FILE *fp) {
+    int bufsize;
+
+    if ((fp->flag & (_READ | _WRITE | _ERR)) != _WRITE)
+        return EOF;
+    bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ; // decides if fp buf has size 1
+    if (bufsize - fp->cnt == 0)
+        return EOF;
+    if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
+        fp->cnt = bufsize;
+        fp->ptr = fp->base;
+        fp->flag |= _ERR;
+        return EOF;
+    }
+    fp->ptr = fp->base;
+    *fp->ptr++ = x;
+    fp->cnt = bufsize - 1;
+    return 0
+}
+
+int my_fflush(FILE *fp) {
+    // todo: how to clear elem of my_iob, 
+    // given that the array isn't a pointer array?
+    int ret = my_flushbuf('\0', fp);
+    close(fp->fd);
+    return ret;
+}
+
+int my_fclose(FILE *fp) {
+    int ret = my_fflush(fp);
+    int ret2 = fclose(fp->fd);
+    return (ret != 0 || ret2 != 0) ? -1 : 0;
 }
 
 int main(int argc, char *argv[]) {
