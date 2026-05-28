@@ -49,7 +49,7 @@ int my_flushbuf(int, FILE *);
 #define putc(x, p) (--(p)->cnt >= 0 \
                     ? *(p)->ptr++ = (x) : my_flushbuf((x), p))
 #define getchar()  getc(stdin)
-#define putchar()  putc((x), stdout)
+#define putchar(x)  putc((x), stdout)
 #define PERMS 0666
 
 FILE *my_fopen(char *name, char *mode) {
@@ -75,7 +75,7 @@ FILE *my_fopen(char *name, char *mode) {
     if (fd == -1)
         return NULL;
     fp->fd = fd;
-    fp->cnt = 0;
+    fp->cnt = BUFSIZ;
     fp->base = NULL;
     fp->flag = (*mode == 'r') ? _READ : _WRITE;
     return fp;
@@ -109,36 +109,74 @@ int my_flushbuf(int x, FILE *fp) {
     if ((fp->flag & (_READ | _WRITE | _ERR)) != _WRITE)
         return EOF;
     bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ; // decides if fp buf has size 1
-    if (bufsize - fp->cnt == 0)
-        return EOF;
-    if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
-        fp->cnt = bufsize;
+    if (fp->base == NULL) {  // no buffer allocd yet
+        if ((fp->base = (char *) malloc(bufsize)) == NULL)
+            return EOF;  // cant get buffer
         fp->ptr = fp->base;
+    }
+    int added = 0;
+    if (fp->cnt > 0) {
+        *fp->ptr++ = x;
+        fp->cnt--;
+        added = 1;
+    }
+    if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
         fp->flag |= _ERR;
         return EOF;
     }
+    fp->cnt = bufsize;
     fp->ptr = fp->base;
-    *fp->ptr++ = x;
-    fp->cnt = bufsize - 1;
-    return 0
+    if (!added) {
+        *fp->ptr++ = x;
+        fp->cnt--;
+    }
+    return 0;
 }
 
 int my_fflush(FILE *fp) {
-    // todo: how to clear elem of my_iob, 
-    // given that the array isn't a pointer array?
-    int ret = my_flushbuf('\0', fp);
-    close(fp->fd);
-    return ret;
+    int bufsize;
+
+    if ((fp->flag & (_READ | _WRITE | _ERR)) != _WRITE)
+        return EOF;
+    bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ; // decides if fp buf has size 1
+    if (fp->base == NULL) {  // no buffer allocd yet
+        if ((fp->base = (char *) malloc(bufsize)) == NULL)
+            return EOF;  // cant get buffer
+        fp->ptr = fp->base;
+    }
+    if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
+        fp->flag |= _ERR;
+        return EOF;
+    }
+    fp->cnt = bufsize;
+    fp->ptr = fp->base;
+    return 0;
 }
 
 int my_fclose(FILE *fp) {
+    // flush before closing
     int ret = my_fflush(fp);
-    int ret2 = fclose(fp->fd);
+    // fp is an element of my_iob, we gotta free it up for fopen 
+    // by setting read and write flag bits to zero. 
+    fp->flag &= ~_READ;
+    fp->flag &= ~_WRITE;
+    // free up file descriptor with os
+    int ret2 = close(fp->fd);
+    // indicate if any errors
     return (ret != 0 || ret2 != 0) ? -1 : 0;
 }
 
 int main(int argc, char *argv[]) {
-    FILE *fp = my_fopen(argv[1], "r");
-    int c = my_fillbuf(fp);
-    return 0;
+    FILE *fp = my_fopen(argv[1], "a");
+    putc('\n', fp);
+    putc('\n', fp);
+    char *s = argv[2];
+    while (*s++)
+        putc(*s, fp);
+    putc('\n', fp);
+    putc('\n', fp);
+    int status = my_fclose(fp);
+    putchar('0' + status);
+    putchar('\n');
+    return status;
 }
