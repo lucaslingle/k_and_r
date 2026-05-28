@@ -75,7 +75,7 @@ FILE *my_fopen(char *name, char *mode) {
     if (fd == -1)
         return NULL;
     fp->fd = fd;
-    fp->cnt = BUFSIZ;
+    fp->cnt = 0;
     fp->base = NULL;
     fp->flag = (*mode == 'r') ? _READ : _WRITE;
     return fp;
@@ -112,25 +112,30 @@ int my_flushbuf(int x, FILE *fp) {
     if (fp->base == NULL) {  // no buffer allocd yet
         if ((fp->base = (char *) malloc(bufsize)) == NULL)
             return EOF;  // cant get buffer
+        fp->cnt = bufsize;
         fp->ptr = fp->base;
-    }
-    int added = 0;
-    if (fp->cnt > 0) {
         *fp->ptr++ = x;
         fp->cnt--;
-        added = 1;
+        return 0;
+    } else {
+        int added = 0;
+        if (fp->cnt > 0) {
+            *fp->ptr++ = x;
+            fp->cnt--;
+            added = 1;
+        }
+        if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
+            fp->flag |= _ERR;
+            return EOF;
+        }
+        fp->cnt = bufsize;
+        fp->ptr = fp->base;
+        if (!added) {
+            *fp->ptr++ = x;
+            fp->cnt--;
+        }
+        return 0;
     }
-    if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
-        fp->flag |= _ERR;
-        return EOF;
-    }
-    fp->cnt = bufsize;
-    fp->ptr = fp->base;
-    if (!added) {
-        *fp->ptr++ = x;
-        fp->cnt--;
-    }
-    return 0;
 }
 
 int my_fflush(FILE *fp) {
@@ -171,7 +176,7 @@ int main(int argc, char *argv[]) {
     putc('\n', fp);
     putc('\n', fp);
     char *s = argv[2];
-    while (*s++)
+    for (; *s; s++)
         putc(*s, fp);
     putc('\n', fp);
     putc('\n', fp);
