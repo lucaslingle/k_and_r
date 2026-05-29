@@ -147,6 +147,7 @@ int my_fflush(FILE *fp) {
     if (fp->base == NULL) {  // no buffer allocd yet
         if ((fp->base = (char *) malloc(bufsize)) == NULL)
             return EOF;  // cant get buffer
+        fp->cnt = bufsize;
     }
     if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
         fp->flag |= _ERR;
@@ -158,8 +159,10 @@ int my_fflush(FILE *fp) {
 }
 
 int my_fclose(FILE *fp) {
-    // flush before closing
-    int ret = my_fflush(fp);
+    // flush before closing if writable
+    int ret1 = 0;
+    if ((fp->flag & _WRITE) == _WRITE)
+        ret1 = my_fflush(fp);
     // fp is an element of my_iob, we gotta free it up for fopen 
     // by setting read and write flag bits to zero. 
     fp->flag &= ~_READ;
@@ -167,7 +170,7 @@ int my_fclose(FILE *fp) {
     // free up file descriptor with os
     int ret2 = close(fp->fd);
     // indicate if any errors
-    return (ret != 0 || ret2 != 0) ? -1 : 0;
+    return (ret1 != 0 || ret2 != 0) ? -1 : 0;
 }
 
 int main(int argc, char *argv[]) {
