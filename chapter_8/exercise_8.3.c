@@ -147,7 +147,6 @@ int my_fflush(FILE *fp) {
     if (fp->base == NULL) {  // no buffer allocd yet
         if ((fp->base = (char *) malloc(bufsize)) == NULL)
             return EOF;  // cant get buffer
-        fp->ptr = fp->base;
     }
     if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
         fp->flag |= _ERR;
@@ -176,12 +175,20 @@ int main(int argc, char *argv[]) {
     putc('\n', fp);
     putc('\n', fp);
     char *s = argv[2];
-    for (; *s; s++)
-        putc(*s, fp);
+    while (*s)
+        putc(*s++, fp);
     putc('\n', fp);
     putc('\n', fp);
     int status = my_fclose(fp);
+
+    // side note: status not printing to stdout for some reason unless we force it
     putchar('0' + status);
     putchar('\n');
+    // it seems there is no mechanism to auto-flush our stdout & stderr on exit,
+    // unlike when program normally exits and stdio's _iob FILEs are all flushed & closed.
+    // gonna do it manually here to simulate what libc does for stdio FILEs.
+    for (FILE *fp = my_iob; fp < my_iob + OPEN_MAX; fp++)
+        my_fclose(fp);
+
     return status;
 }
