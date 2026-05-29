@@ -1,0 +1,224 @@
+/*
+The standard library function
+
+    int fseek(FILE *fp, long offset, int origin)
+
+is identical to lseek except that fp is a file pointer instead of a file descriptor, 
+and the return value is an int status not a position. Write fseek. Make sure that your
+fseek coordinates properly with the buffering done for the other functions of the library.
+*/
+
+
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+#define EOF      (-1)
+#define BUFSIZ   1024
+#define OPEN_MAX 20  // max num files open at once
+
+enum _flags {
+    _READ  = 01,
+    _WRITE = 02,
+    _UNBUF = 04,
+    _EOF   = 010,
+    _ERR   = 020
+};
+
+typedef struct my_iobuf {
+    int cnt;
+    char *ptr;
+    char *base;
+    int flag;
+    int fd;
+} FILE;
+FILE my_iob[OPEN_MAX] = {
+    { 0, (char *) 0, (char *) 0, _READ, 0},
+    { 0, (char *) 0, (char *) 0, _WRITE, 1},
+    { 0, (char *) 0, (char *) 0, _WRITE | _UNBUF, 2},
+};
+
+#define stdin  (&my_iob[0])
+#define stdout (&my_iob[1])
+#define stderr (&my_iob[2])
+
+int my_fillbuf(FILE *);
+int my_flushbuf(int, FILE *);
+
+#define feof(p)    (((p)->flag & _EOF) != 0)
+#define ferror(p)  (((p)->flag & _ERR) != 0)
+#define fileno(p)  ((p)->fd)
+
+#define getc(p)    (--(p)->cnt >= 0 \
+                    ? (unsigned char) *(p)->ptr++ : my_fillbuf(p))
+#define putc(x, p) (--(p)->cnt >= 0 \
+                    ? *(p)->ptr++ = (x) : my_flushbuf((x), p))
+#define getchar()  getc(stdin)
+#define putchar(x)  putc((x), stdout)
+#define PERMS 0666
+
+FILE *my_fopen(char *name, char *mode) {
+    int fd;
+    FILE *fp;
+
+    if (*mode != 'r' && *mode != 'w' && *mode != 'a')
+        return NULL;
+    for (fp = my_iob; fp < my_iob + OPEN_MAX; fp++)
+        if ((fp->flag & (_READ | _WRITE)) == 0)  // found free slot
+            break;
+    if (fp >= my_iob + OPEN_MAX)
+        return NULL;
+
+    if (*mode == 'w')
+        fd = creat(name, PERMS);
+    else if (*mode == 'a') {
+        if ((fd = open(name, O_WRONLY, 0)) == -1)
+            fd = creat(name, PERMS);
+        lseek(fd, 0L, 2);
+    } else
+        fd = open(name, O_RDONLY, 0);
+    if (fd == -1)
+        return NULL;
+    fp->fd = fd;
+    fp->cnt = 0;
+    fp->base = NULL;
+    fp->flag = (*mode == 'r') ? _READ : _WRITE;
+    return fp;
+}
+
+int my_fillbuf(FILE *fp) {
+    int bufsize;
+
+    if ((fp->flag & (_READ | _WRITE | _ERR)) != _READ)
+        return EOF;
+    bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ;
+    if (fp->base == NULL)  // no buffer allocd yet
+        if ((fp->base = (char *) malloc(bufsize)) == NULL)
+            return EOF;  // cant get buffer
+    fp->ptr = fp->base;
+    fp->cnt = read(fp->fd, fp->ptr, bufsize);
+    if (--fp->cnt < 0) {
+        if (fp->cnt == -1)
+            fp->flag |= _EOF;
+        else
+            fp->flag |= _ERR;
+        fp->cnt = 0;
+        return EOF;
+    }
+    return (unsigned char) *fp->ptr++;
+}
+
+int my_flushbuf(int x, FILE *fp) {
+    int bufsize;
+
+    if ((fp->flag & (_READ | _WRITE | _ERR)) != _WRITE)
+        return EOF;
+    bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ; // decides if fp buf has size 1
+    if (fp->base == NULL) {  // no buffer allocd yet
+        if ((fp->base = (char *) malloc(bufsize)) == NULL)
+            return EOF;  // cant get buffer
+        fp->cnt = bufsize;
+        fp->ptr = fp->base;
+        *fp->ptr++ = x;
+        fp->cnt--;
+        return 0;
+    } else {
+        int added = 0;
+        if (fp->cnt > 0) {
+            *fp->ptr++ = x;
+            fp->cnt--;
+            added = 1;
+        }
+        if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
+            fp->flag |= _ERR;
+            return EOF;
+        }
+        fp->cnt = bufsize;
+        fp->ptr = fp->base;
+        if (!added) {
+            *fp->ptr++ = x;
+            fp->cnt--;
+        }
+        return 0;
+    }
+}
+
+int my_fflush(FILE *fp) {
+    int bufsize;
+
+    if ((fp->flag & (_READ | _WRITE | _ERR)) != _WRITE)
+        return EOF;
+    bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZ; // decides if fp buf has size 1
+    if (fp->base == NULL) {  // no buffer allocd yet
+        if ((fp->base = (char *) malloc(bufsize)) == NULL)
+            return EOF;  // cant get buffer
+        fp->cnt = bufsize;
+    }
+    if (write(fp->fd, fp->base, bufsize - fp->cnt) != bufsize - fp->cnt) {
+        fp->flag |= _ERR;
+        return EOF;
+    }
+    fp->cnt = bufsize;
+    fp->ptr = fp->base;
+    return 0;
+}
+
+int my_fclose(FILE *fp) {
+    // flush before closing if writable
+    int ret1 = 0;
+    if ((fp->flag & _WRITE) == _WRITE)
+        ret1 = my_fflush(fp);
+    // fp is an element of my_iob, we gotta free it up for fopen 
+    // by setting read and write flag bits to zero. 
+    fp->flag &= ~_READ;
+    fp->flag &= ~_WRITE;
+    // free up file descriptor with os
+    int ret2 = close(fp->fd);
+    // indicate if any errors
+    return (ret1 != 0 || ret2 != 0) ? -1 : 0;
+}
+
+int my_fseek(FILE *fp, long offset, int origin) {
+    if ((fp->flag & _ERR) == _ERR)
+        return -1;
+    if ((fp->flag & _WRITE) == _WRITE)
+        if (my_fflush(fp) != 0)
+            return -1;
+    int ret = lseek(fp->fd, offset, origin);
+    return (ret != 0) ? -1 : 0;
+}
+
+int main(int argc, char *argv[]) {
+    FILE *fp = my_fopen(argv[1], "a");
+    my_fseek(fp, 2L, 0);
+    putc('*', fp);
+    putc('*', fp);
+    char *s = argv[2];
+    while (*s)
+        putc(*s++, fp);
+    putc('*', fp);
+    putc('*', fp);
+    int status1 = my_fclose(fp);
+    putchar('0' + (status1 != 0));
+    putchar('\n');
+
+    fp = my_fopen(argv[1], "r");
+    my_fseek(fp, 2L, 0);
+    for (int i = 0; i < strlen(argv[2]) + 4; i++)
+        putchar(getc(fp));
+    int status2 = my_fclose(fp);
+    putchar('\n');
+    putchar('0' + (status2 != 0));
+    putchar('\n');
+
+    // it seems there is no mechanism to auto-flush our stdout & stderr on exit,
+    // unlike when program normally exits and stdio's _iob FILEs are all flushed & closed.
+    // gonna do it manually here to simulate what libc does for stdio FILEs.
+    for (FILE *fp = my_iob; fp < my_iob + OPEN_MAX; fp++)
+        my_fclose(fp);
+
+    return (status1 != 0) || (status2 != 0);
+}
