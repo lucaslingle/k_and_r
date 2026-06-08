@@ -1,7 +1,7 @@
 /*
-malloc accepts a size request without checking its plausibility;
-free believes that the block it is asked to free contains a valid size field.
-Improve these routines so they take more pains with error checking.
+Write a routing bfree(p,n) that will free an arbitrary block p of n characters
+into the free list maintained by malloc and free. By using bfree, a user can add
+a static or external array to the free list at any time.
 */
 
 #include <stdio.h>
@@ -86,6 +86,10 @@ void my_free(void *ap) {
         fprintf(stderr, "my_free: encountered invalid size %d in block header.\n", bp->s.size);
         // exit(1);
     }
+    if (freep == NULL) {  // no free list yet, use base block.
+        base.s.ptr = freep = &base;
+        base.s.size = 0;
+    }
 
     for (p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
         if (p >= p->s.ptr && (bp > p || bp < p->s.ptr))
@@ -104,13 +108,63 @@ void my_free(void *ap) {
     freep = p;
 }
 
-int main(int argc, char *argv[]) {
-    void *q = my_malloc(0);
+void my_bfree(void *q, int n) {
+    if (n < 2 * sizeof(Header)) {
+        fprintf(stderr, "bfree: encountered invalid size %d.\n", n);
+        // exit(1);
+    }
+    if (freep == NULL) {  // no free list yet, use base block.
+        base.s.ptr = freep = &base;
+        base.s.size = 0;
+    }
 
-    void *p = my_malloc(100);
-    Header *hp = (Header *)p - 1;
-    hp->s.size = 0;
-    void *vp = (void *)(hp+1);
-    my_free(vp);
+    Header *bp = (Header *) q;
+    bp->s.size = n / sizeof(Header);
+
+    Header *p;
+    for (p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
+        if (p >= p->s.ptr && (bp > p || bp < p->s.ptr))
+            break;
+    
+    if (bp + bp->s.size == p->s.ptr) {
+        // printf("case 0");
+        bp->s.size += p->s.ptr->s.size;
+        bp->s.ptr = p->s.ptr->s.ptr;
+    } else {
+        // printf("case 1");
+        bp->s.ptr = p->s.ptr;
+    }
+    if (p + p->s.size == bp) {
+        // printf("case 2");
+        p->s.size += bp->s.size;
+        p->s.ptr = bp->s.ptr;
+    } else {
+        // printf("case 3");
+        p->s.ptr = bp;
+    }
+    freep = p;
+}
+
+int main(int argc, char *argv[]) {
+    printf("Header size: %lu\n", sizeof(Header));
+
+    char arr[100] = "ABCDEFGHIJKLMNOPQRSTUVWXYABCDEFGHIJKLMNOPQRSTUVWXYABCDEFGHIJKLMNOPQRSTUVWXYABCDEFGHIJKLMNOPQRSTUVWX\0";
+    my_bfree(arr, 100);
+
+    printf("freep: %p\n", freep);
+    printf("arr: %p\n", arr);
+
+    int i = 0;
+    Header *p = freep;
+    for (; ; i++, p = p->s.ptr) {
+        printf("Block %d: %p, %d\n", i, p, p->s.size);
+        if (p != freep)
+            break;
+    }
+
+    char *s = (char *) my_malloc(20);
+    printf("strlen(s): %lu\n", strlen(s));
+    printf("s: %s\n", s);
+
     return 0;
 }
