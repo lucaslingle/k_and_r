@@ -15,7 +15,7 @@ a static or external array to the free list at any time.
 typedef long Align;         // for alignment to long boundary
 typedef union header {      // block header
     struct {
-        union header *ptr;    // next block if on free list, using char ptr for raw bytes
+        union header *ptr;    // next block if on free list
         unsigned bytes;     // size of this block in bytes
     } s;
     Align x;                // force alignment of blocks
