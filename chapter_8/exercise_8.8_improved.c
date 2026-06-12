@@ -135,6 +135,29 @@ void my_bfree(char *q, int n) {
     freep = p;
 }
 
+/*
+printout from main should say something like
+
+Header size: 16
+freep: 0x100030008
+arr: 0x16fdd6eb4
+Block 0: 0x100030008, 16
+	?n?o
+Block 1: 0x16fdd6eb4, 100
+       dMNOPQRSTUVWX1ABCDEFGHIJKLMNOPQRSTUVWX2ABCDEFGHIJKLMNOPQRSTUVWX3ABCDEFGHIJKLMNOPQRSTUVWX4
+Block 2: 0x100030008, 16
+	?n?o
+FGHIJKLMNOPQRSTUVWX4
+Block 0: 0x100030008, 16
+	?n?o
+Block 1: 0x16fdd6eb4, 64
+       @MNOPQRSTUVWX1ABCDEFGHIJKLMNOPQRSTUVWX2ABCDEFGHIJKLMN
+Block 2: 0x100030008, 16
+	?n?o
+
+which indicates that the last 36 bytes of freed Block 1 were allocated (16 header + 20 malloc'd).
+*/
+
 int main(int argc, char *argv[]) {
     printf("Header size: %lu\n", sizeof(Header));
 
